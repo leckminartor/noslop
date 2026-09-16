@@ -1,0 +1,18 @@
+# generated audio / reports
+ab_*.wav
+demo_*.wav
+demo_*.opus
+*_restored.wav
+*_enhanced.wav
+report*.json
+uvicorn.log
+
+# python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+
+install_web_deps.bat
+run_*.py
+*_check/

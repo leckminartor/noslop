@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NoSlop — RVQ/Codec Artifact Remover</title>
+<style>
+  :root {
+    --bg: #0e1114; --panel: #171c21; --edge: #2a333c;
+    --txt: #d7e0e8; --dim: #7d8b98; --acc: #37d4a0; --warn: #e8b04b; --bad: #e85c5c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--txt); font: 14px/1.5 'Segoe UI', system-ui, sans-serif; padding: 24px; }
+  .wrap { max-width: 860px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 600; letter-spacing: 0.5px; }
+  h1 span { color: var(--acc); }
+  .sub { color: var(--dim); margin-bottom: 22px; }
+  .card { background: var(--panel); border: 1px solid var(--edge); border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+  .drop { border: 2px dashed var(--edge); border-radius: 10px; padding: 34px; text-align: center; color: var(--dim); cursor: pointer; transition: border-color .15s; }
+  .drop:hover, .drop.over { border-color: var(--acc); color: var(--txt); }
+  .row { display: flex; gap: 12px; align-items: center; margin-top: 14px; flex-wrap: wrap; }
+  select, button { background: #1d252c; color: var(--txt); border: 1px solid var(--edge); border-radius: 6px; padding: 8px 14px; font-size: 14px; cursor: pointer; }
+  button.acc { background: var(--acc); color: #06281e; font-weight: 600; border: none; }
+  button.acc:disabled { opacity: .4; cursor: default; }
+  .bar { height: 6px; background: #222b33; border-radius: 3px; overflow: hidden; margin-top: 12px; }
+  .bar i { display: block; height: 100%; background: var(--acc); width: 0%; transition: width .3s; }
+  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-top: 14px; }
+  .m { background: #131a20; border: 1px solid var(--edge); border-radius: 8px; padding: 10px 12px; }
+  .m .k { color: var(--dim); font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
+  .m .v { font-size: 20px; font-weight: 600; margin-top: 2px; }
+  .m .d { font-size: 12px; margin-top: 2px; }
+  .good { color: var(--acc); } .warn { color: var(--warn); } .bad { color: var(--bad); }
+  .flag { display: inline-block; background: #3a2020; color: var(--bad); border-radius: 4px; padding: 2px 8px; font-size: 12px; margin-right: 6px; margin-top: 8px; }
+  .hidden { display: none; }
+  a.btn { display: inline-block; background: var(--acc); color: #06281e; border-radius: 6px; padding: 9px 18px; font-weight: 600; text-decoration: none; }
+  .note { color: var(--dim); font-size: 12px; margin-top: 10px; }
+  audio { width: 100%; margin-top: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>No<span>Slop</span> — AI-Music Artifact Remover</h1>
+  <div class="sub">Removes RVQ/codec sizzle &amp; band-copy artifacts. Spectral gating, transient-safe, loudness-matched.</div>
+
+  <div class="card">
+    <div class="drop" id="drop">Drop an audio file here or click to choose<br><small>WAV · FLAC · MP3 · OPUS · M4A · WEBM</small></div>
+    <input type="file" id="file" accept="audio/*,.wav,.flac,.mp3,.opus,.m4a,.webm" style="display:none">
+    <div class="row">
+      <label>Mode:
+        <select id="mode">
+          <option value="dsp">dsp (fast, no AI)</option>
+          <option value="quality" selected>quality (AI stems)</option>
+          <option value="deep">deep (AI re-render)</option>
+        </select>
+      </label>
+      <label>Preset:
+        <select id="preset">
+          <option value="gentle">gentle (mastering-grade)</option>
+          <option value="standard" selected>standard</option>
+          <option value="strong">strong (max reduction)</option>
+        </select>
+      </label>
+      <button class="acc" id="go" disabled>Process</button>
+      <span id="status" class="note"></span>
+    </div>
+    <div class="bar hidden" id="barwrap"><i id="bar"></i></div>
+  </div>
+
+  <div class="card hidden" id="resultCard">
+    <div id="flags"></div>
+    <div class="metrics" id="metrics"></div>
+    <div class="note" id="timing"></div>
+    <audio id="player" controls></audio>
+    <div class="row">
+      <a id="dl" class="btn btn-acc" href="#" download>Download restored WAV</a>
+    </div>
+  </div>
+</div>
+<script>
+const $ = s => document.querySelector(s);
+const drop = $('#drop'), fileInput = $('#file'), go = $('#go'), status = $('#status');
+let file = null, jobId = null, poll = null;
+
+drop.onclick = () => fileInput.click();
+drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
+drop.ondragleave = () => drop.classList.remove('over');
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); if (e.dataTransfer.files.length) setFile(e.dataTransfer.files[0]); };
+fileInput.onchange = () => { if (fileInput.files.length) setFile(fileInput.files[0]); };
+
+function setFile(f) { go.disabled = false; status.textContent = f.name; }
+go.onclick = async () => {
+  go.disabled = true;
+  const fd = new FormData();
+  fd.append('file', fileInput.files[0]);
+  fd.append('preset', $('#preset').value);
+  fd.append('mode', $('#mode').value);
+  status.textContent = 'uploading…';
+  try {
+    const r = await fetch('/api/jobs', { method: 'POST', body: fd });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.detail || 'upload failed');
+    jobId = j.id;
+    $('#barwrap').classList.remove('hidden');
+    poll = setInterval(check, 500);
+  } catch (e) { status.textContent = 'error: ' + e.message; go.disabled = false; }
+};
+
+async function check() {
+  const r = await fetch('/api/jobs/' + jobId);
+  const j = await r.json();
+  $('#bar').style.width = Math.round(j.progress * 100) + '%';
+  status.textContent = j.status + (j.message ? ' — ' + j.message : '');
+  if (j.status === 'done') { clearInterval(poll); show(j); }
+  if (j.status === 'error') { clearInterval(poll); status.textContent = 'error: ' + (j.error || 'unknown'); go.disabled = false; }
+}
+
+function fmt(v, unit, digits = 2) {
+  return (v == null || isNaN(v)) ? '—' : v.toFixed(digits) + (unit || '');
+}
+function delta(after, before, unit, goodDown) {
+  if (after == null || before == null) return '';
+  const d = after - before;
+  const cls = (goodDown ? d < 0 : d > 0) ? 'good' : 'warn';
+  return `<div class="d ${cls}">${d >= 0 ? '+' : ''}${d.toFixed(2)} ${unit}</div>`;
+}
+
+function show(j) {
+  const a = j.analysis, r = j.result;
+  $('#flags').innerHTML = (a.artifact_flags || []).map(f => `<span class="flag">${f.replace(/_/g, ' ')}</span>`).join('');
+  const rows = [];
+  function m(label, before, after, unit, goodDown, digits) {
+    rows.push(`<div class="m"><div class="k">${label}</div><div class="v">${fmt(after, '', digits)}</div>${delta(after, before, unit, goodDown)}</div>`);
+  }
+  const b = r.before, aft = r.after;
+  m('HF incoherence (sizzle)', b.hf_incoherence, aft.hf_incoherence, '', true, 4);
+  m('Integrated loudness', b.lufs, aft.lufs, ' LUFS', false, 1);
+  m('True peak', b.true_peak_dbtp, aft.true_peak_dbtp, ' dBTP', false, 1);
+  $('#metrics').innerHTML = rows.join('');
+  $('#timing').textContent = `duration ${r.duration_s}s`;
+  $('#player').src = '/api/jobs/' + jobId + '/download';
+  $('#dl').href = '/api/jobs/' + jobId + '/download';
+  $('#resultCard').classList.remove('hidden');
+  go.disabled = false;
+}
+
+async function final() {
+  const r = await fetch('/api/jobs/' + jobId);
+  const j = await r.json();
+  if (j.status === 'done') show(j);
+}
+// patch check to call show on done
+const _origCheck = check;
+check = async function() {
+  const r = await fetch('/api/jobs/' + jobId);
+  const j = await r.json();
+  $('#bar').style.width = Math.round(j.progress * 100) + '%';
+  status.textContent = j.status + (j.message ? ' — ' + j.message : '');
+  if (j.status === 'done') { clearInterval(poll); show(j); }
+  if (j.status === 'error') { clearInterval(poll); status.textContent = 'error: ' + (j.error || 'unknown'); go.disabled = false; }
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+numpy>=1.24
+scipy>=1.10
+soundfile>=0.12
+fastapi>=0.100
+uvicorn>=0.23
+python-multipart>=0.0.6
+pytest>=7.0

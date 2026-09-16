@@ -1,0 +1,37 @@
+name: Bug report
+description: Something does not work as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Include the processing report JSON (app/CLI emit one) and any console output.
+      placeholder: A clear description of the problem.
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Processing mode
+      options: ["dsp", "quality", "deep", "dering", "not applicable"]
+    validations:
+      required: true
+  - type: input
+    id: audio
+    attributes:
+      label: Audio format
+      description: "Sample rate, codec/bitrate if known (e.g. '48 kHz stereo, Opus 32k')"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: NoSlop version
+      placeholder: "0.1.0 (output of python -m app --version)"
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
