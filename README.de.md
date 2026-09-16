@@ -2,6 +2,12 @@
 
 [English](README.md) · Deutsch
 
+[![CI](https://github.com/leckminartor/noslop/actions/workflows/ci.yml/badge.svg)](https://github.com/leckminartor/noslop/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-0.1.0-green.svg)](CHANGELOG.md)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-FFDD00?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://paypal.me/klausminator)
+
 **Version 0.1.0** · `python -m app --version` · Versionierung: [SemVer](https://semver.org) —
 MAJOR.MINOR.PATCH. Breaking-Änderungen / neue Pipelines → MAJOR/MINOR, Fixes → PATCH.
 
@@ -31,7 +37,7 @@ Die Restaurierung ist ein Wiener-artiges Gain-Gate auf dieser Artefakt-Schätzun
   gentle ≈ −15 %, standard ≈ −20 %, strong ≈ −34 % HF-Anteil @ Opus 32k).
 
 
-## KI-Verstärkungsstufe (GPU, ab v1.1)
+## KI-Verstärkungsstufe (GPU)
 
 Magnitude-Gating kann nur *hinzugefügte* Artefakte entfernen. Verlorenes HF
 (MP3/AAC ersetzen das Band) braucht Rekonstruktion — das leisten zwei KI-Komponenten:
@@ -109,3 +115,13 @@ app/
   cli.py         CLI (analyze / restore / enhance)
   web/index.html Single-File-UI
 ```
+
+## Support
+
+Wenn NoSlop deine KI-Tracks aus der Blechzone gerettet hat, freue ich mich über einen Kaffee:
+
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-FFDD00?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://paypal.me/klausminator)
+
+## License
+
+[MIT](LICENSE)
