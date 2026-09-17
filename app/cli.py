@@ -35,6 +35,7 @@ def main(argv=None):
     a_en = sub.add_parser("enhance", help="AI-enhance (demucs stems + SBR repair, GPU)")
     a_en.add_argument("file")
     a_en.add_argument("--mode", default="quality", choices=["fast", "quality", "deep", "dering", "derverb", "polish"])
+    a_en.add_argument("--preset", default="standard", choices=["gentle", "standard", "strong"])
     a_en.add_argument("-o", "--out", default=None)
     a_en.add_argument("--report", default=None, help="write report JSON here")
 
@@ -44,31 +45,42 @@ def main(argv=None):
         from .io import read_audio, write_audio
         from .analysis import analyze_health
         from .enhance import enhance
+        from .restoration import profile_for
         x, sr, fmt = read_audio(args.file)
         b = analyze_health(x, sr)
         print(f"file: {args.file} ({b['lufs']} LUFS, TP {b['true_peak_dbtp']} dBTP, "
               f"incoh {b['hf_incoherence']})")
         for f in b["artifact_flags"]:
             print(f"  flag: {f}")
+        prof = profile_for(args.preset, args.mode)
         if args.mode == "fast":
             y, out_sr, rep = enhance(x, sr, use_ai=False)
         elif args.mode == "deep":
             print("enhancing (deep: demucs + full re-render) ...")
             y, out_sr, rep = enhance(x, sr, use_ai=True, sbr=True,
-                                     residual_alpha=0.0, sbr_thresh=0.3)
+                                     residual_alpha=prof.get("residual_alpha", 0.0),
+                                     sbr_thresh=prof.get("sbr_thresh", 0.35))
         elif args.mode == "dering":
             from .dering_ai import dering_ai
             print("deringing (metallic/comb removal, demucs-residual-guided) ...")
-            y, out_sr, rep = dering_ai(x, sr, spike_db=5.0, max_db=10.0, passes=2)
+            pd = profile_for(args.preset, "dering")
+            y, out_sr, rep = dering_ai(x, sr, spike_db=pd["spike_db"],
+                                       max_db=pd["max_db"], passes=pd["passes"])
         elif args.mode == "derverb":
             from .derverb import derverb
             print("derverb (AI-echo tail shortening, anchor-calibrated) ...")
-            y, rep = derverb(x, sr, margin_db_s=45.0, passes=2)
+            pv = profile_for(args.preset, "derverb")
+            y, rep = derverb(x, sr, margin_db_s=pv.get("margin_db_s", 45.0),
+                             passes=pv.get("passes", 2))
             out_sr = rep["out_sr"]
         elif args.mode == "polish":
             from .polish import polish
             print("polish (combined: metallic notches + echo tails) ...")
-            y, out_sr, rep = polish(x, sr, rounds=1)
+            pp = profile_for(args.preset, "polish")
+            y, out_sr, rep = polish(x, sr, rounds=pp.get("rounds", 1),
+                                    dering_spike_db=pp.get("dering_spike_db", 6.0),
+                                    dering_max_db=pp.get("dering_max_db", 8.0),
+                                    derverb_margin_db_s=pp.get("derverb_margin_db_s", 45.0))
         else:
             print("enhancing (quality: demucs stems + conservative repair) ...")
             y, out_sr, rep = enhance(x, sr, use_ai=True, sbr=True,

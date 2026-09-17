@@ -16,7 +16,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   -26 -> -64 dB/s; MP3 demo -11.5 -> -13.9 dB. Onsets 1.00, LUFS neutral.
   Available as CLI `enhance --mode derverb` and server mode `derverb`.
 
-## [0.2.0] - 2026-09-17
+## [0.2.1] - 2026-09-17
+
+### Changed
+- **Presets now steer all modes**: the gentle/standard/strong dial scales the
+  intensity of every stage (dering notch depth, derverb decay margin, quality/
+  deep residual blend, polish rounds) via the central `PRESET_PROFILES` table -
+  previously the presets only affected the dsp mode and the AI modes ran with
+  hardcoded defaults.
+- `enhance` CLI gains `--preset` for the AI modes.
+- UI polish: author byline moved to a page footer; inline favicon (no 404s).
+
+### Fixed
+- Windows ProactorEventLoop reset traceback when clients abort audio streams
+  (harmless, but it flooded the server log).
+- release-script CITATION regex anchored (was clobbering `cff-version`).
+
+## [0.2.0] - 2026-09-17## [0.2.0] - 2026-09-17
 
 ### Added
 - **Combined polish pass** (`app/polish.py`, mode `polish`): metallic de-ringing

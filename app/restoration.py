@@ -85,6 +85,39 @@ PRESETS = {
 }
 
 
+
+
+# Intensity profiles for the AI modes: one dial (gentle/standard/strong) scales
+# the relevant knobs of every stage. Keys match RestoreParams fields where they
+# exist; AI modes translate their own knobs per profile.
+PRESET_PROFILES = {
+    "gentle":   {"dering": {"spike_db": 7.0, "max_db": 6.0, "passes": 1},
+                 "derverb": {"margin_db_s": 60.0, "passes": 1},
+                 "quality": {"residual_alpha": 0.35, "sbr_thresh": 0.40},
+                 "polish":  {"rounds": 1, "dering_spike_db": 7.0, "dering_max_db": 6.0,
+                             "derverb_margin_db_s": 60.0},
+                 "deep":    {"residual_alpha": 0.15, "sbr_thresh": 0.40}},
+    "standard": {"dering": {"spike_db": 6.0, "max_db": 8.0, "passes": 1},
+                 "derverb": {"margin_db_s": 45.0, "passes": 2},
+                 "quality": {"residual_alpha": 0.25, "sbr_thresh": 0.35},
+                 "polish":  {"rounds": 1, "dering_spike_db": 6.0, "dering_max_db": 8.0,
+                             "derverb_margin_db_s": 45.0},
+                 "deep":    {"residual_alpha": 0.0, "sbr_thresh": 0.35}},
+    "strong":   {"dering": {"spike_db": 5.0, "max_db": 10.0, "passes": 2},
+                 "derverb": {"margin_db_s": 30.0, "passes": 3},
+                 "quality": {"residual_alpha": 0.10, "sbr_thresh": 0.30},
+                 "polish":  {"rounds": 2, "dering_spike_db": 5.0, "dering_max_db": 10.0,
+                             "derverb_margin_db_s": 30.0},
+                 "deep":    {"residual_alpha": 0.0, "sbr_thresh": 0.30}},
+}
+
+
+def profile_for(preset: str, mode: str) -> dict:
+    """Intensity profile for a (preset, mode) pair; falls back to standard."""
+    prof = PRESET_PROFILES.get(preset, PRESET_PROFILES["standard"])
+    return dict(prof.get(mode, {}))
+
+
 def params_from_preset(preset: str = "standard", **overrides) -> "RestoreParams":
     """Build RestoreParams from a named preset with optional overrides."""
     if preset not in PRESETS:

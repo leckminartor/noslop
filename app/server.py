@@ -38,7 +38,7 @@ if sys.platform == "win32":
         _silence_connection_reset(
             asyncio.proactor_events._ProactorBasePipeTransport._call_connection_lost)
 from .io import read_audio, write_audio
-from .restoration import PRESETS, params_from_preset, restore
+from .restoration import PRESETS, params_from_preset, profile_for, restore
 
 app = FastAPI(title="NoSlop", version=__version__)
 
@@ -154,32 +154,42 @@ def _process(job: Job):
             result_rep = {"mode": "dsp"}
         elif job.mode == "polish":
             from .polish import polish
+            prof = profile_for(job.preset, "polish")
             job.progress = 0.15
             y, out_sr, result_rep = polish(
-                x, sr, rounds=1,
+                x, sr, rounds=prof.get("rounds", 1),
+                dering_spike_db=prof.get("dering_spike_db", 5.0),
+                dering_max_db=prof.get("dering_max_db", 8.0),
+                derverb_margin_db_s=prof.get("derverb_margin_db_s", 45.0),
                 progress_cb=lambda p, label: (setattr(job, "progress", 0.2 + 0.7 * p),
                                               setattr(job, "message", f"polish: {label}")))
             job.progress = 0.95
         elif job.mode == "derverb":
             from .derverb import derverb
+            prof_v = profile_for(job.preset, "derverb")
             job.progress = 0.3
-            y, result_rep = derverb(x, sr, margin_db_s=45.0, passes=2)
+            y, result_rep = derverb(x, sr, margin_db_s=prof_v.get("margin_db_s", 45.0),
+                                    passes=prof_v.get("passes", 2))
             out_sr = sr
             job.progress = 0.95
         elif job.mode == "dering":
             from .dering_ai import dering_ai
+            prof_d = profile_for(job.preset, "dering")
             job.progress = 0.15
             y, out_sr, result_rep = dering_ai(
-                x, sr, spike_db=5.0, max_db=10.0, passes=2,
+                x, sr, spike_db=prof_d["spike_db"],
+                max_db=prof_d["max_db"], passes=prof_d["passes"],
                 progress_cb=lambda p, label: (setattr(job, "progress", 0.2 + 0.7 * p),
                                               setattr(job, "message", f"deringing: {label}")))
             job.progress = 0.95
         else:
             # AI path: quality/deep, single call (GPU), progress via callback
+            prof_q = profile_for(job.preset, job.mode if job.mode in ("quality", "deep") else "quality")
+            kwargs = dict(use_ai=True, sbr=True,
+                          residual_alpha=prof_q.get("residual_alpha", 0.25),
+                          sbr_thresh=prof_q.get("sbr_thresh", 0.35))
             if job.mode == "deep":
-                kwargs = dict(use_ai=True, sbr=True, residual_alpha=0.0, sbr_thresh=0.3)
-            else:
-                kwargs = dict(use_ai=True, sbr=True, residual_alpha=0.25, sbr_thresh=0.35)
+                kwargs["residual_alpha"] = 0.0
             job.progress = 0.15
             y, out_sr, result_rep = _enhance(
                 x, sr, **kwargs,
