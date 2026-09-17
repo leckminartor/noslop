@@ -68,6 +68,10 @@ Alle Varianten: dLUFS 0.00 (lautness-neutral). Onset-Erhalt 1.0 in allen DSP-Tes
 
 ## Nutzung
 
+**Windows-Ein-Klick:** Doppelklick auf `Start NoSlop.bat` - Menü mit
+Web-App (KI/DSP), CLI-Helfern, Versionsanzeige und Testrunner.
+
+
 **Web-App** (Drag & Drop, Presets, Before/After-Metriken, Player + Download):
 ```bash
 pip install -r requirements.txt

@@ -69,6 +69,10 @@ SBR stage rebuilds an approximation. Verified numbers, not magic.
 
 ## Quick start
 
+**Windows one-click:** double-click `Start NoSlop.bat` - a menu with
+web app (AI/DSP), CLI helpers, version info and the test runner.
+
+
 ```bash
 pip install -r requirements.txt
 python -m uvicorn app.server:app --port 8737
