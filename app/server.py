@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import sys
 import tempfile
 import threading
 import time
@@ -16,6 +17,26 @@ from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, Response
 
 from .analysis import analyze_health
+
+if sys.platform == "win32":
+    # Windows ProactorEventLoop logs a spurious traceback when a client aborts a
+    # stream (e.g. the audio player closing a range request after the job is
+    # done). The data was delivered fine; silence the harmless reset.
+    import asyncio
+    from functools import wraps
+
+    def _silence_connection_reset(func):
+        @wraps(func)
+        def wrapper(self, *args, **kwargs):
+            try:
+                return func(self, *args, **kwargs)
+            except (ConnectionResetError, ConnectionAbortedError):
+                pass
+        return wrapper
+
+    asyncio.proactor_events._ProactorBasePipeTransport._call_connection_lost = \
+        _silence_connection_reset(
+            asyncio.proactor_events._ProactorBasePipeTransport._call_connection_lost)
 from .io import read_audio, write_audio
 from .restoration import PRESETS, params_from_preset, restore
 
