@@ -13,7 +13,7 @@ import numpy as np
 
 from . import __version__
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response
 
 from .analysis import analyze_health
 from .io import read_audio, write_audio
@@ -57,6 +57,16 @@ def index():
     with open(os.path.join(os.path.dirname(__file__), "web", "index.html"),
               "r", encoding="utf-8") as f:
         return f.read()
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    """Inline SVG favicon so the browser doesn't log a 404."""
+    svg = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'
+           '<rect width="64" height="64" rx="12" fill="#0e1114"/>'
+           '<path d="M18 46 L18 18 L22 18 L42 40 L42 18 L46 18 L46 46 L42 46 '
+           'L22 24 L22 46 Z" fill="#37d4a0"/></svg>')
+    return Response(content=svg, media_type="image/svg+xml")
 
 
 @app.get("/api/presets")
