@@ -34,7 +34,7 @@ def main(argv=None):
 
     a_en = sub.add_parser("enhance", help="AI-enhance (demucs stems + SBR repair, GPU)")
     a_en.add_argument("file")
-    a_en.add_argument("--mode", default="quality", choices=["fast", "quality", "deep", "dering", "derverb"])
+    a_en.add_argument("--mode", default="quality", choices=["fast", "quality", "deep", "dering", "derverb", "polish"])
     a_en.add_argument("-o", "--out", default=None)
     a_en.add_argument("--report", default=None, help="write report JSON here")
 
@@ -65,6 +65,10 @@ def main(argv=None):
             print("derverb (AI-echo tail shortening, anchor-calibrated) ...")
             y, rep = derverb(x, sr, margin_db_s=45.0, passes=2)
             out_sr = rep["out_sr"]
+        elif args.mode == "polish":
+            from .polish import polish
+            print("polish (combined: metallic notches + echo tails) ...")
+            y, out_sr, rep = polish(x, sr, rounds=1)
         else:
             print("enhancing (quality: demucs stems + conservative repair) ...")
             y, out_sr, rep = enhance(x, sr, use_ai=True, sbr=True,

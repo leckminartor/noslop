@@ -16,7 +16,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   -26 -> -64 dB/s; MP3 demo -11.5 -> -13.9 dB. Onsets 1.00, LUFS neutral.
   Available as CLI `enhance --mode derverb` and server mode `derverb`.
 
-## [0.1.1] - 2026-09-16
+## [0.2.0] - 2026-09-17
+
+### Added
+- **Combined polish pass** (`app/polish.py`, mode `polish`): metallic de-ringing
+  and AI-echo tail suppression in one pipeline, alternating rounds. On the
+  combined worst case (combs + bright tail): tail/peak -5.1 -> -9.7 dB (dry
+  -11.9), HF slope -26 -> -54 dB/s, kurtosis 239 -> 623. On real MP3: tail
+  -11.5 -> -12.7 dB, slope -68 -> -90 dB/s, kurtosis 799 -> 790, LUFS neutral.
+- **Dry-skip safety gate**: polish skips the tail limiter on already-dry
+  material (clean test: SNR +17 dB, HF within +7%, near-transparent).
+- `polish` is the new default mode in the web UI.
+
+### Fixed
+- Favicon served inline (`/favicon.ico` + `<link rel=icon>`) - no more 404s.
+- Windows launcher reads the version dynamically; `scripts/release.py` bumps
+  the version everywhere (READMEs, UI title, CITATION, CHANGELOG) in one run.
+
+## [0.1.1] - 2026-09-16## [0.1.1] - 2026-09-16
 
 ### Added
 - UI shows version number and author byline ("by Klaus Perner (DJ LECK)") in the

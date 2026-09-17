@@ -75,7 +75,7 @@ def presets():
     return {"presets": list(PRESETS.keys()), "default": "standard",
             "version": __version__,
             "ai_available": AI_AVAILABLE,
-            "modes": ["dsp", "quality", "deep", "dering", "derverb"]}
+            "modes": ["dsp", "quality", "deep", "dering", "derverb", "polish"]}
 
 
 @app.post("/api/jobs")
@@ -85,8 +85,8 @@ async def create_job(file: UploadFile = File(...),
     """mode: dsp (fast) | quality (AI stems, conservative) | deep (AI full re-render)."""
     if preset not in PRESETS:
         raise HTTPException(400, f"preset must be one of {list(PRESETS)}")
-    if mode not in ("dsp", "quality", "deep", "dering", "derverb"):
-        raise HTTPException(400, "mode must be dsp|quality|deep|dering|derverb")
+    if mode not in ("dsp", "quality", "deep", "dering", "derverb", "polish"):
+        raise HTTPException(400, "mode must be dsp|quality|deep|dering|derverb|polish")
     if mode in ("quality", "deep") and not AI_AVAILABLE:
         raise HTTPException(400, "AI mode unavailable: install .venv with torch+demucs")
     jid = uuid.uuid4().hex[:12]
@@ -131,6 +131,14 @@ def _process(job: Job):
             y = y.astype(np.float64)
             out_sr = sr
             result_rep = {"mode": "dsp"}
+        elif job.mode == "polish":
+            from .polish import polish
+            job.progress = 0.15
+            y, out_sr, result_rep = polish(
+                x, sr, rounds=1,
+                progress_cb=lambda p, label: (setattr(job, "progress", 0.2 + 0.7 * p),
+                                              setattr(job, "message", f"polish: {label}")))
+            job.progress = 0.95
         elif job.mode == "derverb":
             from .derverb import derverb
             job.progress = 0.3

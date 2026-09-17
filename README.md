@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/leckminartor/noslop/actions/workflows/ci.yml/badge.svg)](https://github.com/leckminartor/noslop/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.1.1-green.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.2.0-green.svg)](CHANGELOG.md)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-FFDD00?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://paypal.me/klausminator)
 
@@ -119,7 +119,7 @@ y, out_sr, report = enhance(x, sr, use_ai=True, sbr=True,
 ```bash
 python -m pytest tests/ -q      # 8 unit tests
 python tests/bench_codec.py     # codec benchmark vs. naive lowpass
-python -m app --version         # 0.1.0
+python -m app --version         # prints e.g. NoSlop 0.2.0
 ```
 
 Validated internals: BS.1770 loudness within 0.012 LU of pyloudnorm, true-peak

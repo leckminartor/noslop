@@ -67,7 +67,7 @@ def main():
     p = os.path.join(ROOT, "CITATION.cff")
     if os.path.exists(p):
         c = read(p)
-        c = re.sub(r"version: \d+\.\d+\.\d+", f"version: {new}", c, count=1)
+        c = re.sub(r"^version: \d+\.\d+\.\d+", f"version: {new}", c, count=1, flags=re.M)
         c = re.sub(r"date-released: .*", f"date-released: {date.today().isoformat()}", c)
         write(p, c)
         print("  updated CITATION.cff")
