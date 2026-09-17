@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NoSlop — RVQ/Codec Artifact Remover</title>
+<title>NoSlop v0.1.1 — RVQ Artifact Remover by Klaus Perner (DJ LECK)</title>
 <style>
   :root {
     --bg: #0e1114; --panel: #171c21; --edge: #2a333c;
@@ -35,12 +35,17 @@
   a.btn { display: inline-block; background: var(--acc); color: #06281e; border-radius: 6px; padding: 9px 18px; font-weight: 600; text-decoration: none; }
   .note { color: var(--dim); font-size: 12px; margin-top: 10px; }
   audio { width: 100%; margin-top: 12px; }
+  .byline { color: var(--dim); font-size: 13px; margin-top: 2px; }
+  .byline a { color: var(--dim); }
+  .byline a:hover { color: var(--acc); }
+  #app-version { color: var(--acc); font-size: 14px; font-weight: 400; vertical-align: middle; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>No<span>Slop</span> — AI-Music Artifact Remover</h1>
+  <h1>No<span>Slop</span> — RVQ Artifact Remover <span id="app-version"></span></h1>
   <div class="sub">Removes RVQ/codec sizzle &amp; band-copy artifacts. Spectral gating, transient-safe, loudness-matched.</div>
+  <div class="byline">by Klaus Perner (DJ LECK) · <a href="https://github.com/leckminartor/noslop" target="_blank" rel="noopener">github.com/leckminartor/noslop</a></div>
 
   <div class="card">
     <div class="drop" id="drop">Drop an audio file here or click to choose<br><small>WAV · FLAC · MP3 · OPUS · M4A · WEBM</small></div>
@@ -78,6 +83,7 @@
 </div>
 <script>
 const $ = s => document.querySelector(s);
+const API_BASE = '';
 const drop = $('#drop'), fileInput = $('#file'), go = $('#go'), status = $('#status');
 let file = null, jobId = null, poll = null;
 
@@ -142,6 +148,21 @@ function show(j) {
   $('#resultCard').classList.remove('hidden');
   go.disabled = false;
 }
+
+async function initVersion() {
+  try {
+    const r = await fetch('/api/presets');
+    const j = await r.json();
+    const el = document.getElementById('app-version');
+    if (el && j.version) el.textContent = 'v' + j.version;
+    if (j.ai_available === false) {
+      const modeSel = document.getElementById('mode');
+      if (modeSel) { [...modeSel.options].forEach(o => { if (o.value !== 'dsp') o.disabled = true; }); }
+      status.textContent = 'AI modes unavailable (no torch/demucs in .venv) — use dsp mode';
+    }
+  } catch (e) { /* ignore */ }
+}
+initVersion();
 
 async function final() {
   const r = await fetch('/api/jobs/' + jobId);

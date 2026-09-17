@@ -62,6 +62,7 @@ def index():
 @app.get("/api/presets")
 def presets():
     return {"presets": list(PRESETS.keys()), "default": "standard",
+            "version": __version__,
             "ai_available": AI_AVAILABLE,
             "modes": ["dsp", "quality", "deep", "dering"]}
 

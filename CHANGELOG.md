@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-09-16
+
+### Added
+- UI shows version number and author byline ("by Klaus Perner (DJ LECK)") in the
+  header; version is served from the API (single source of truth) and shown in
+  the browser tab title.
+- AI-mode availability is surfaced in the UI (disabled when torch/demucs missing).
+
 ## [0.1.0] - 2026-09-16
 
 ### Added
