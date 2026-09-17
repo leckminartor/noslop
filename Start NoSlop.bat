@@ -3,6 +3,9 @@ setlocal enabledelayedexpansion
 title NoSlop - RVQ/Codec Artifact Remover
 cd /d "%~dp0"
 
+for /f "delims=" %%v in ('python -m app --version 2^>nul') do set "NOSLOP_VERSION=%%v"
+if not defined NOSLOP_VERSION set "NOSLOP_VERSION=NoSlop"
+
 set "PORT=8737"
 set "VENV_PY=%~dp0.venv\Scripts\python.exe"
 set "URL=http://127.0.0.1:%PORT%"
@@ -10,7 +13,7 @@ set "URL=http://127.0.0.1:%PORT%"
 :menu
 cls
 echo ============================================
-echo   NoSlop v0.1.0 - RVQ/Codec Artifact Remover
+echo   %NOSLOP_VERSION% - RVQ/Codec Artifact Remover
 echo   https://github.com/leckminartor/noslop
 echo ============================================
 echo.

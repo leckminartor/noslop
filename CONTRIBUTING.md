@@ -54,3 +54,22 @@ the PR.
 Please include: input format (sample rate, codec/bitrate if known), the
 processing mode used, the processing report JSON (the app and CLI both emit
 one), and an audio excerpt if possible.
+
+## Releasing a new version
+
+The version lives in **one place**: `app/__init__.py` (`__version__`).
+Everything else is updated by the release script:
+
+```bash
+python scripts/release.py 0.2.0        # bump + update READMEs/UI/CITATION + CHANGELOG section
+# -> then edit CHANGELOG.md and fill in the release notes
+python scripts/release.py 0.2.0 --push  # alternative: commit + tag + push in one step
+```
+
+Pushing a `v*` tag triggers the release workflow, which runs the tests and
+publishes a GitHub release automatically.
+
+Files kept in sync by the script: `app/__init__.py`, `README.md`, `README.de.md`,
+`app/web/index.html` (tab title), `CITATION.cff`, `CHANGELOG.md`. The Windows
+launcher (`Start NoSlop.bat`) reads the version dynamically at runtime - nothing
+to bump there.
