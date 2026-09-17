@@ -85,7 +85,7 @@ python -m app.cli analyze track.wav          # Codec-Health: LUFS, dBTP, HF-Inco
 python -m app.cli restore track.wav --preset standard -o track_restored.wav
 python -m app.cli enhance track.wav --mode fast|quality|deep
 # presets: gentle | standard | strong
-# modes:   fast (DSP) | quality (AI stems) | deep (AI full re-render, am stärksten)
+# modes:   fast | quality | deep | dering (Metallic-Notcher) | derverb (KI-Echo-Schwänze)
 ```
 
 **Python API:**

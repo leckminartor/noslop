@@ -34,7 +34,7 @@ def main(argv=None):
 
     a_en = sub.add_parser("enhance", help="AI-enhance (demucs stems + SBR repair, GPU)")
     a_en.add_argument("file")
-    a_en.add_argument("--mode", default="quality", choices=["fast", "quality", "deep", "dering"])
+    a_en.add_argument("--mode", default="quality", choices=["fast", "quality", "deep", "dering", "derverb"])
     a_en.add_argument("-o", "--out", default=None)
     a_en.add_argument("--report", default=None, help="write report JSON here")
 
@@ -60,6 +60,11 @@ def main(argv=None):
             from .dering_ai import dering_ai
             print("deringing (metallic/comb removal, demucs-residual-guided) ...")
             y, out_sr, rep = dering_ai(x, sr, spike_db=5.0, max_db=10.0, passes=2)
+        elif args.mode == "derverb":
+            from .derverb import derverb
+            print("derverb (AI-echo tail shortening, anchor-calibrated) ...")
+            y, rep = derverb(x, sr, margin_db_s=45.0, passes=2)
+            out_sr = rep["out_sr"]
         else:
             print("enhancing (quality: demucs stems + conservative repair) ...")
             y, out_sr, rep = enhance(x, sr, use_ai=True, sbr=True,

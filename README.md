@@ -45,7 +45,11 @@ do what is physically impossible for pure DSP:
    as music is essentially the artifact bed. Its narrow prominent peaks are the
    metallic resonances (e.g. +16 dB at 10.9 kHz on MP3 64k); adaptive notches
    remove them from the mix, with a music guard protecting real musical combs.
-3. **SBR-style band repair** - incoherent HF bins are re-filled with octave-
+3. **AI-echo tail suppressor** - the bright metallic 'AI reverb' hang is measured
+   against the mix's own anchor-band decay; a causal limiter shortens tails that
+   linger past the plausible decay (benchmark: tail/peak -5.0 -> -10.7 dB,
+   dry reference -11.9 dB; slope -26 -> -64 dB/s).
+4. **SBR-style band repair** - incoherent HF bins are re-filled with octave-
    replicated magnitudes (Spectral Band Replication, used inversely to undo
    codec destruction).
 
@@ -97,7 +101,7 @@ python -m venv .venv
 ```
 
 Modes: `fast` (DSP, seconds), `quality` (AI stems), `deep` (full re-render),
-`dering` (metallic removal). Without CUDA the AI modes fall back to CPU.
+`dering` (metallic removal), `derverb` (AI-echo tails). Without CUDA the AI modes fall back to CPU.
 
 **Python API:**
 

@@ -27,6 +27,7 @@ os.makedirs(WORKDIR, exist_ok=True)
 # optional AI stage: loaded lazily on first quality/deep job (needs .venv torch+demucs)
 try:
     from .enhance import enhance as _enhance, get_or_load_model
+    from .derverb import derverb as _derverb
     AI_AVAILABLE = True
 except Exception:
     _enhance = None
@@ -74,7 +75,7 @@ def presets():
     return {"presets": list(PRESETS.keys()), "default": "standard",
             "version": __version__,
             "ai_available": AI_AVAILABLE,
-            "modes": ["dsp", "quality", "deep", "dering"]}
+            "modes": ["dsp", "quality", "deep", "dering", "derverb"]}
 
 
 @app.post("/api/jobs")
@@ -84,8 +85,8 @@ async def create_job(file: UploadFile = File(...),
     """mode: dsp (fast) | quality (AI stems, conservative) | deep (AI full re-render)."""
     if preset not in PRESETS:
         raise HTTPException(400, f"preset must be one of {list(PRESETS)}")
-    if mode not in ("dsp", "quality", "deep", "dering"):
-        raise HTTPException(400, "mode must be dsp|quality|deep|dering")
+    if mode not in ("dsp", "quality", "deep", "dering", "derverb"):
+        raise HTTPException(400, "mode must be dsp|quality|deep|dering|derverb")
     if mode in ("quality", "deep") and not AI_AVAILABLE:
         raise HTTPException(400, "AI mode unavailable: install .venv with torch+demucs")
     jid = uuid.uuid4().hex[:12]
@@ -130,6 +131,12 @@ def _process(job: Job):
             y = y.astype(np.float64)
             out_sr = sr
             result_rep = {"mode": "dsp"}
+        elif job.mode == "derverb":
+            from .derverb import derverb
+            job.progress = 0.3
+            y, result_rep = derverb(x, sr, margin_db_s=45.0, passes=2)
+            out_sr = sr
+            job.progress = 0.95
         elif job.mode == "dering":
             from .dering_ai import dering_ai
             job.progress = 0.15

@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **AI-echo tail suppressor** (`app/derverb.py`): detects and shortens the bright
+  metallic 'AI reverb' hang. Self-calibrating: the mix's own 1-2 kHz anchor band
+  defines plausible decay; a causal limiter enforces anchor_slope - margin (backstop
+  -35 dB/s) on HF tails. Iterative (2-3 passes converge toward the dry reference).
+  Benchmark: synthetic bright tail -5.0 -> -10.7 dB tail/peak (dry -11.9), slope
+  -26 -> -64 dB/s; MP3 demo -11.5 -> -13.9 dB. Onsets 1.00, LUFS neutral.
+  Available as CLI `enhance --mode derverb` and server mode `derverb`.
+
 ## [0.1.1] - 2026-09-16
 
 ### Added
