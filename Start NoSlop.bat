@@ -46,7 +46,6 @@ if not exist "%VENV_PY%" (
     goto menu
 )
 echo Starte Web-App mit AI-Unterstuetzung auf %URL% ...
-start "" "%URL%"
 "%VENV_PY%" -m uvicorn app.server:app --host 127.0.0.1 --port %PORT%
 echo.
 echo Server beendet.
@@ -55,7 +54,6 @@ goto menu
 
 :start_web_dsp
 echo Starte Web-App (nur DSP-Modi) auf %URL% ...
-start "" "%URL%"
 python -m uvicorn app.server:app --host 127.0.0.1 --port %PORT%
 echo.
 echo Server beendet.

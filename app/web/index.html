@@ -47,6 +47,13 @@
   a.btn { display: inline-block; background: var(--acc); color: #06281e; border-radius: 6px; padding: 9px 18px; font-weight: 600; text-decoration: none; }
   .note { color: var(--dim); font-size: 12px; margin-top: 10px; }
   audio { width: 100%; margin-top: 12px; }
+  .lib { margin-top: 14px; }
+  .lib-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border: 1px solid var(--edge); border-radius: 8px; margin-top: 8px; background: #131a20; flex-wrap: wrap; }
+  .lib-item .nm { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 320px; }
+  .lib-item .meta { color: var(--dim); font-size: 12px; white-space: nowrap; }
+  .lib-item button { padding: 5px 12px; font-size: 13px; }
+  .lib-item .del { background: none; border: none; color: var(--bad); cursor: pointer; font-size: 16px; padding: 2px 6px; }
+  .lib-item.playing { border-color: var(--acc); }
 </style>
 </head>
 <body>
@@ -79,6 +86,10 @@
       <span id="status" class="note"></span>
     </div>
     <div class="bar hidden" id="barwrap"><i id="bar"></i></div>
+    <div class="lib hidden" id="libwrap">
+      <div class="note" style="margin-top:14px">Sources stay in the app — re-process with any mode/preset without re-uploading.</div>
+      <div id="lib"></div>
+    </div>
   </div>
 
   <div class="card hidden" id="resultCard">
@@ -120,17 +131,83 @@ drop.onclick = () => fileInput.click();
 drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
 drop.ondragleave = () => drop.classList.remove('over');
 drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); if (e.dataTransfer.files.length) { go.disabled = false; status.textContent = e.dataTransfer.files[0].name; } };
-fileInput.onchange = () => { if (fileInput.files.length) { go.disabled = false; status.textContent = fileInput.files[0].name; } };
+fileInput.onchange = () => { if (fileInput.files.length) { go.disabled = false; status.textContent = fileInput.files[0].name; delete go.dataset.source; activeSid = null; } };
+
+// ---------------- source library ----------------
+let libAudio = null;   // single floating preview player element
+let activeSid = null;  // currently selected library source (if any)
+
+function stopPreview() {
+  if (libAudio) { libAudio.pause(); libAudio.remove(); libAudio = null; }
+  document.querySelectorAll('.lib-item').forEach(el => el.classList.remove('playing'));
+}
+
+function renderLibrary(items) {
+  const wrap = document.getElementById('libwrap'), box = document.getElementById('lib');
+  wrap.classList.toggle('hidden', !items.length);
+  box.innerHTML = items.map(it => `
+    <div class="lib-item" data-sid="${it.id}">
+      <span class="nm" title="${it.filename}">${it.filename}</span>
+      <span class="meta">${it.duration_s}s · ${(it.sr/1000).toFixed(1)} kHz · ${it.format}</span>
+      <button class="preview" title="listen to the original">▶</button>
+      <button class="rerun">Process again</button>
+      <button class="del" title="remove from library">✕</button>
+    </div>`).join('');
+  box.querySelectorAll('.lib-item').forEach(row => {
+    const sid = row.dataset.sid;
+    const name = row.querySelector('.nm').textContent;
+    row.querySelector('.preview').onclick = () => {
+      if (libAudio && row.classList.contains('playing')) { stopPreview(); return; }
+      stopPreview();
+      libAudio = new Audio('/api/library/' + sid + '/file');
+      libAudio.controls = true; libAudio.style.width = '100%';
+      row.appendChild(libAudio); row.classList.add('playing');
+      libAudio.play();
+    };
+    row.querySelector('.del').onclick = async () => {
+      await fetch('/api/library/' + sid, { method: 'DELETE' });
+      if (activeSid === sid) { activeSid = null; status.textContent = ''; go.disabled = fileInput.files.length === 0; }
+      loadLibrary();
+    };
+    row.querySelector('.rerun').onclick = () => {
+      stopPreview();
+      activeSid = sid;
+      status.textContent = name + ' (from library)';
+      go.disabled = false;
+      go.dataset.source = sid;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+  });
+}
+
+async function loadLibrary() {
+  try {
+    const r = await fetch('/api/library');
+    const j = await r.json();
+    renderLibrary(j.items || []);
+  } catch (e) { /* library is optional */ }
+}
+loadLibrary();
 
 go.onclick = async () => {
   go.disabled = true;
-  const fd = new FormData();
-  fd.append('file', fileInput.files[0]);
-  fd.append('preset', $('#preset').value);
-  fd.append('mode', $('#mode').value);
-  status.textContent = 'uploading…';
+  const useSource = go.dataset.source;
   try {
-    const r = await fetch('/api/jobs', { method: 'POST', body: fd });
+    let r;
+    if (useSource && activeSid) {
+      // re-process from the persistent library (no re-upload)
+      const fd = new FormData();
+      fd.append('preset', $('#preset').value);
+      fd.append('mode', $('#mode').value);
+      r = await fetch('/api/jobs/source/' + activeSid, { method: 'POST', body: fd });
+    } else {
+      const fd = new FormData();
+      fd.append('file', fileInput.files[0]);
+      fd.append('preset', $('#preset').value);
+      fd.append('mode', $('#mode').value);
+      status.textContent = 'uploading…';
+      r = await fetch('/api/jobs', { method: 'POST', body: fd });
+    }
     const j = await r.json();
     if (!r.ok) throw new Error(j.detail || 'upload failed');
     jobId = j.id;
@@ -166,6 +243,7 @@ function show(j) {
   $('#dl').href = '/api/jobs/' + jobId + '/download';
   $('#resultCard').classList.remove('hidden');
   go.disabled = false;
+  loadLibrary();   // the processed upload just joined the library
 }
 
 async function check() {
