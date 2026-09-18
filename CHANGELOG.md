@@ -16,6 +16,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   -26 -> -64 dB/s; MP3 demo -11.5 -> -13.9 dB. Onsets 1.00, LUFS neutral.
   Available as CLI `enhance --mode derverb` and server mode `derverb`.
 
+## [0.3.0] - 2026-09-18
+
+### Added
+- **Per-source result history**: every processing run is kept and listed under
+  "Results" for its source — play ("Show" loads it into the main player),
+  download and delete individual results. Survives app restarts. New endpoints:
+  `GET /api/source/{id}/results`, `GET /api/results/{jid}/download`,
+  `DELETE /api/results/{jid}`.
+
 ## [0.2.2] - 2026-09-18
 
 ### Added
