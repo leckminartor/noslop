@@ -102,6 +102,7 @@
     <div id="flags"></div>
     <div class="metrics" id="metrics"></div>
     <div class="note" id="timing"></div>
+    <div class="note" id="nowPlaying" style="margin-top:8px;font-size:13px"></div>
     <audio id="player" controls></audio>
     <div class="row">
       <a id="dl" class="btn btn-acc" href="#" download>Download restored WAV</a>
@@ -235,6 +236,8 @@ function renderResults(sid, items) {
       row.classList.add('active');
       $('#player').src = '/api/results/' + jid + '/download';
       $('#dl').href = '/api/results/' + jid + '/download';
+      $('#nowPlaying').innerHTML = 'Now playing: <b>' + (libName(sid) || '') + '</b> · ' +
+        it.mode + ' / ' + it.preset + ' · from results';
       $('#resultCard').classList.remove('hidden');
       $('#player').play();
     };
@@ -262,6 +265,7 @@ async function loadResults(sid) {
 
 go.onclick = async () => {
   go.disabled = true;
+  stopAllPlayback();   // stop the player as soon as a new job starts
   const useSource = go.dataset.source;
   try {
     let r;
@@ -277,6 +281,7 @@ go.onclick = async () => {
       fd.append('preset', $('#preset').value);
       fd.append('mode', $('#mode').value);
       status.textContent = 'uploading…';
+      $('#nowPlaying').textContent = '';
       r = await fetch('/api/jobs', { method: 'POST', body: fd });
     }
     const j = await r.json();
@@ -287,6 +292,11 @@ go.onclick = async () => {
   } catch (e) { status.textContent = 'error: ' + e.message; go.disabled = false; }
 };
 
+function stopAllPlayback() {
+  const p = $('#player');
+  if (p) { try { p.pause(); } catch (e) {} }
+  stopPreview();
+}
 function fmt(v, unit, digits = 2) {
   return (v == null || isNaN(v)) ? '—' : v.toFixed(digits) + (unit || '');
 }
@@ -312,6 +322,9 @@ function show(j) {
   $('#timing').textContent = `mode ${r.mode} · duration ${r.duration_s}s · processing ${r.processing_s}s`;
   $('#player').src = '/api/jobs/' + jobId + '/download';
   $('#dl').href = '/api/jobs/' + jobId + '/download';
+  const srcName = (activeSid ? libName(activeSid) : (fileInput.files[0] ? fileInput.files[0].name : ''));
+  $('#nowPlaying').innerHTML = 'Now playing: <b>' + (srcName || '') + '</b> · ' + r.mode + ' / ' +
+    ($('#preset').value) + ' · restored';
   $('#resultCard').classList.remove('hidden');
   go.disabled = false;
   loadLibrary();   // the processed upload just joined the library
