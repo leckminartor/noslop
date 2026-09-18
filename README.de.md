@@ -4,11 +4,11 @@
 
 [![CI](https://github.com/leckminartor/noslop/actions/workflows/ci.yml/badge.svg)](https://github.com/leckminartor/noslop/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.2.1-green.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.2.2-green.svg)](CHANGELOG.md)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-FFDD00?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://paypal.me/klausminator)
 
-**Version 0.2.1** · `python -m app --version` · Versionierung: [SemVer](https://semver.org) —
+**Version 0.2.2** · `python -m app --version` · Versionierung: [SemVer](https://semver.org) —
 MAJOR.MINOR.PATCH. Breaking-Änderungen / neue Pipelines → MAJOR/MINOR, Fixes → PATCH.
 
 Reduces AI-music artifacts (Residual Vector Quantization residuals, codec sizzle,

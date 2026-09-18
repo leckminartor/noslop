@@ -1,8 +1,8 @@
 cff-version: 1.2.0
 message: "If you use NoSlop in your research, please cite it."
 title: "NoSlop - RVQ/Codec Artifact Remover for AI Music"
-version: 0.2.1
-date-released: 2026-09-17
+version: 0.2.2
+date-released: 2026-09-18
 authors:
   - family-names: "leckminartor"
     website: "https://github.com/leckminartor"

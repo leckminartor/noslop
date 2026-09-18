@@ -16,6 +16,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   -26 -> -64 dB/s; MP3 demo -11.5 -> -13.9 dB. Onsets 1.00, LUFS neutral.
   Available as CLI `enhance --mode derverb` and server mode `derverb`.
 
+## [0.2.2] - 2026-09-18
+
+### Added
+- **Source library**: every upload is stored persistently (`~/.noslop/library`)
+  and can be re-processed with any mode/preset via "Process again" — no
+  re-upload needed. Includes original-file preview (play button) and delete.
+- Browser now opens automatically only AFTER the server is ready to answer
+  requests (fixes the .bat launcher opening the UI too early).
+  Set `NOSLOP_AUTOOPEN=0` to disable.
+
 ## [0.2.1] - 2026-09-17
 
 ### Changed
