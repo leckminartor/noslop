@@ -473,6 +473,22 @@ def source_results(sid: str):
     return {"items": _history_for(sid)}
 
 
+@app.delete("/api/results")
+def results_clear():
+    """Delete ALL historical result files + the history index (library untouched)."""
+    h = _history_load()
+    n = 0
+    for sid, items in list(h.items()):
+        for e in items:
+            try:
+                os.remove(e["out_path"])
+                n += 1
+            except OSError:
+                pass
+    _history_save({})
+    return {"ok": True, "deleted": n}
+
+
 @app.get("/api/results/{jid}/download")
 def result_download(jid: str):
     """Download a historical result by job id (works across restarts)."""

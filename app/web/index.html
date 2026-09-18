@@ -110,8 +110,9 @@
   </div>
 
   <div class="card hidden" id="resCard">
-    <h2 style="font-size:15px;margin-bottom:4px">Results <span id="resSrcName" style="color:var(--dim);font-weight:400"></span></h2>
-    <div class="note">Every run on this source is kept here — play, download or delete. Click "Show" to load a result into the player above.</div>
+    <h2 style="font-size:15px;margin-bottom:4px;display:inline-block">Results <span id="resSrcName" style="color:var(--dim);font-weight:400"></span></h2>
+    <button id="clearResults" title="delete ALL result files (library stays)" style="float:right;font-size:12px;padding:4px 10px">Clear all results</button>
+    <div class="note" style="clear:both">Every run on this source is kept here — play, download or delete. Click "Show" to load a result into the player above.</div>
     <div id="reslist"></div>
   </div>
 </div>
@@ -253,6 +254,24 @@ function renderResults(sid, items) {
     };
   });
 }
+
+document.getElementById('clearResults').onclick = async () => {
+  if (!confirm('Delete ALL result files from the results history?\n\n' +
+      'The source files in the library are NOT touched.\n' +
+      'This frees the most disk space and cannot be undone.')) return;
+  try {
+    const r = await fetch('/api/results', { method: 'DELETE' });
+    const j = await r.json();
+    status.textContent = 'cleared ' + (j.deleted || 0) + ' result file(s)';
+  } catch (e) { status.textContent = 'error: ' + e.message; }
+  stopAllPlayback();
+  currentResultJid = null;
+  $('#nowPlaying').textContent = '';
+  $('#player').removeAttribute('src');
+  document.getElementById('resCard').classList.add('hidden');
+  $('#resultCard').classList.add('hidden');
+  if (activeSid) loadResults(activeSid);   // re-render (now empty)
+};
 
 async function loadResults(sid) {
   if (!sid) { document.getElementById('resCard').classList.add('hidden'); return; }
