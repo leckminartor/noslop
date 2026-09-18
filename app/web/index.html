@@ -54,6 +54,12 @@
   .lib-item button { padding: 5px 12px; font-size: 13px; }
   .lib-item .del { background: none; border: none; color: var(--bad); cursor: pointer; font-size: 16px; padding: 2px 6px; }
   .lib-item.playing { border-color: var(--acc); }
+  .res-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border: 1px solid var(--edge); border-radius: 8px; margin-top: 8px; background: #131a20; flex-wrap: wrap; }
+  .res-item.active { border-color: var(--acc); }
+  .res-item .tag { background: #1d252c; border: 1px solid var(--edge); color: var(--acc); border-radius: 4px; padding: 1px 8px; font-size: 12px; }
+  .res-item .meta { color: var(--dim); font-size: 12px; }
+  .res-item button { padding: 4px 10px; font-size: 12px; }
+  .res-item .del { background: none; border: none; color: var(--bad); cursor: pointer; font-size: 16px; padding: 2px 6px; }
 </style>
 </head>
 <body>
@@ -100,6 +106,12 @@
     <div class="row">
       <a id="dl" class="btn btn-acc" href="#" download>Download restored WAV</a>
     </div>
+  </div>
+
+  <div class="card hidden" id="resCard">
+    <h2 style="font-size:15px;margin-bottom:4px">Results <span id="resSrcName" style="color:var(--dim);font-weight:400"></span></h2>
+    <div class="note">Every run on this source is kept here — play, download or delete. Click "Show" to load a result into the player above.</div>
+    <div id="reslist"></div>
   </div>
 </div>
 
@@ -166,7 +178,7 @@ function renderLibrary(items) {
     };
     row.querySelector('.del').onclick = async () => {
       await fetch('/api/library/' + sid, { method: 'DELETE' });
-      if (activeSid === sid) { activeSid = null; status.textContent = ''; go.disabled = fileInput.files.length === 0; }
+      if (activeSid === sid) { activeSid = null; document.getElementById('resCard').classList.add('hidden'); status.textContent = ''; go.disabled = fileInput.files.length === 0; }
       loadLibrary();
     };
     row.querySelector('.rerun').onclick = () => {
@@ -175,6 +187,7 @@ function renderLibrary(items) {
       status.textContent = name + ' (from library)';
       go.disabled = false;
       go.dataset.source = sid;
+      loadResults(sid);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
   });
@@ -188,6 +201,64 @@ async function loadLibrary() {
   } catch (e) { /* library is optional */ }
 }
 loadLibrary();
+
+// ---------------- result history (per source) ----------------
+let currentResultJid = null;
+
+function libName(sid) {
+  const row = document.querySelector('.lib-item[data-sid="' + sid + '"] .nm');
+  return row ? row.textContent : '';
+}
+
+function renderResults(sid, items) {
+  const card = document.getElementById('resCard'), box = document.getElementById('reslist');
+  document.getElementById('resSrcName').textContent = (libName(sid) || '');
+  card.classList.toggle('hidden', !(items && items.length));
+  box.innerHTML = (items || []).map(it => {
+    const d = (it.hf_before != null && it.hf_after != null)
+      ? ` · sizzle ${it.hf_before.toFixed(3)} → ${it.hf_after.toFixed(3)}` : '';
+    return `
+    <div class="res-item" data-jid="${it.jid}">
+      <span class="tag">${it.mode}</span>
+      <span class="tag">${it.preset}</span>
+      <span class="meta">${it.ts} · ${it.duration_s}s · ${it.processing_s}s${d}</span>
+      <button class="showres">Show</button>
+      <button class="dlres">Download</button>
+      <button class="del" title="delete this result">✕</button>
+    </div>`;
+  }).join('');
+  box.querySelectorAll('.res-item').forEach(row => {
+    const jid = row.dataset.jid;
+    row.querySelector('.showres').onclick = () => {
+      currentResultJid = jid;
+      document.querySelectorAll('.res-item').forEach(el => el.classList.remove('active'));
+      row.classList.add('active');
+      $('#player').src = '/api/results/' + jid + '/download';
+      $('#dl').href = '/api/results/' + jid + '/download';
+      $('#resultCard').classList.remove('hidden');
+      $('#player').play();
+    };
+    row.querySelector('.dlres').onclick = () => {
+      const a = document.createElement('a');
+      a.href = '/api/results/' + jid + '/download';
+      a.download = '';
+      a.click();
+    };
+    row.querySelector('.del').onclick = async () => {
+      await fetch('/api/results/' + jid, { method: 'DELETE' });
+      loadResults(activeSid);
+    };
+  });
+}
+
+async function loadResults(sid) {
+  if (!sid) { document.getElementById('resCard').classList.add('hidden'); return; }
+  try {
+    const r = await fetch('/api/source/' + sid + '/results');
+    const j = await r.json();
+    renderResults(sid, j.items || []);
+  } catch (e) { /* history optional */ }
+}
 
 go.onclick = async () => {
   go.disabled = true;
@@ -244,6 +315,7 @@ function show(j) {
   $('#resultCard').classList.remove('hidden');
   go.disabled = false;
   loadLibrary();   // the processed upload just joined the library
+  if (activeSid) loadResults(activeSid);   // refresh the per-source history
 }
 
 async function check() {

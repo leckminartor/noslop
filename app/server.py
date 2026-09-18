@@ -376,6 +376,7 @@ def _process(job: Job):
                       "processing_s": round(time.time() - t0, 2),
                       "out_sr": out_sr, "mode": job.mode}
         job.status = "done"; job.progress = 1.0; job.message = "ok"
+        _history_record(job)
     except Exception as e:
         job.status = "error"; job.error = f"{type(e).__name__}: {e}"
 
@@ -397,6 +398,110 @@ def download(jid: str):
         raise HTTPException(404, "result not ready")
     name = os.path.splitext(job.filename)[0] + "_restored.wav"
     return FileResponse(job.out_path, filename=name, media_type="audio/wav")
+
+
+# ---------------- result history (per source, survives restarts) ----------------
+
+HISTORY_INDEX = os.path.join(LIBDIR, "history.json")
+
+
+def _history_load() -> dict:
+    try:
+        with open(HISTORY_INDEX, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def _history_save(h: dict) -> None:
+    with open(HISTORY_INDEX, "w", encoding="utf-8") as f:
+        json.dump(h, f, indent=1)
+
+
+def _history_record(job: "Job") -> None:
+    """Store a finished job's result in the per-source history (best-effort).
+
+    Only jobs whose source lives in the library directory get a history entry;
+    the result file itself stays in WORKDIR and is referenced by path.
+    """
+    try:
+        sid = _source_id_for_path(job.src_path)
+        if not sid:
+            return
+        r = job.result or {}
+        entry = {
+            "jid": job.id,
+            "mode": job.mode,
+            "preset": job.preset,
+            "ts": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "out_path": job.out_path,
+            "out_name": os.path.splitext(job.filename)[0] + "_restored.wav",
+            "duration_s": r.get("duration_s"),
+            "out_sr": r.get("out_sr"),
+            "processing_s": r.get("processing_s"),
+            "hf_before": (r.get("before") or {}).get("hf_incoherence"),
+            "hf_after": (r.get("after") or {}).get("hf_incoherence"),
+        }
+        h = _history_load()
+        h.setdefault(sid, []).insert(0, entry)   # newest first
+        _history_save(h)
+    except Exception:
+        pass
+
+
+def _source_id_for_path(path: str) -> Optional[str]:
+    """Map a source file path back to its library id (None if not a library file)."""
+    lib = _library_load()
+    want = os.path.normpath(path)
+    for sid, e in lib.items():
+        if os.path.normpath(e.get("path", "")) == want:
+            return sid
+    return None
+
+
+def _history_for(sid: str) -> list:
+    h = _history_load()
+    items = [e for e in h.get(sid, []) if os.path.exists(e.get("out_path", ""))]
+    return items
+
+
+@app.get("/api/source/{sid}/results")
+def source_results(sid: str):
+    """Result history for one library source, newest first."""
+    if not library_get(sid):
+        raise HTTPException(404, "source not found")
+    return {"items": _history_for(sid)}
+
+
+@app.get("/api/results/{jid}/download")
+def result_download(jid: str):
+    """Download a historical result by job id (works across restarts)."""
+    h = _history_load()
+    for sid, items in h.items():
+        for e in items:
+            if e["jid"] == jid and os.path.exists(e.get("out_path", "")):
+                name = e.get("out_name") or f"{jid}_restored.wav"
+                return FileResponse(e["out_path"], filename=name,
+                                    media_type="audio/wav")
+    raise HTTPException(404, "result not found")
+
+
+@app.delete("/api/results/{jid}")
+def result_delete(jid: str):
+    h = _history_load()
+    for sid, items in h.items():
+        for e in list(items):
+            if e["jid"] == jid:
+                items.remove(e)
+                try:
+                    os.remove(e["out_path"])
+                except OSError:
+                    pass
+                if not items:
+                    del h[sid]
+                _history_save(h)
+                return {"ok": True}
+    raise HTTPException(404, "result not found")
 
 
 def _wait_and_open_browser(host: str, port: int, timeout_s: float = 30.0) -> None:
