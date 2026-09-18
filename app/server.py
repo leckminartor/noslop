@@ -1,6 +1,7 @@
 """FastAPI server: upload -> analyze -> restore -> download, with job progress."""
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import sys
@@ -67,8 +68,38 @@ def _library_save(lib: dict) -> None:
         json.dump(lib, f, indent=1)
 
 
+def _file_sha256(path: str, chunk: int = 1 << 20) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        while True:
+            b = f.read(chunk)
+            if not b:
+                break
+            h.update(b)
+    return h.hexdigest()
+
+
+def _library_find_by_hash(lib: dict, digest: str):
+    for e in lib.values():
+        if e.get("sha256") == digest and os.path.exists(e.get("path", "")):
+            return e
+    return None
+
+
 def library_add(path: str, orig_name: str, sid: str) -> dict:
-    """Register a file (already copied into LIBDIR) in the library index."""
+    """Register a file (already copied into LIBDIR) in the library index.
+
+    Deduplicates by content hash: re-uploading the same file (even under a
+    different name or after processing it with another mode) reuses the
+    existing entry instead of adding a duplicate. The freshly stored copy is
+    removed when an entry already exists.
+    """
+    digest = _file_sha256(path)
+    lib = _library_load()
+    existing = _library_find_by_hash(lib, digest)
+    if existing:
+        os.remove(path)  # duplicate content - keep the first copy
+        return existing
     info = sf.info(path)
     entry = {
         "id": sid,
@@ -77,6 +108,7 @@ def library_add(path: str, orig_name: str, sid: str) -> dict:
         "sr": info.samplerate,
         "duration_s": round(info.frames / info.samplerate, 2),
         "format": info.format,
+        "sha256": digest,
         "added": time.strftime("%Y-%m-%d %H:%M:%S"),
     }
     lib = _library_load()
@@ -158,7 +190,8 @@ def library_list():
 
 @app.post("/api/library")
 async def library_upload(file: UploadFile = File(...)):
-    """Store a source file in the persistent library (no processing)."""
+    """Store a source file in the persistent library (no processing).
+    Duplicate content returns the existing entry (no second entry)."""
     sid = uuid.uuid4().hex[:12]
     ext = os.path.splitext(file.filename)[1] or ".wav"
     path = os.path.join(LIBDIR, f"{sid}{ext}")
@@ -167,7 +200,8 @@ async def library_upload(file: UploadFile = File(...)):
     try:
         entry = library_add(path, file.filename, sid)
     except Exception as e:
-        os.remove(path)
+        if os.path.exists(path):
+            os.remove(path)
         raise HTTPException(400, f"cannot decode: {e}")
     return entry
 
@@ -239,7 +273,10 @@ async def create_job(file: UploadFile = File(...),
     with open(src, "wb") as f:
         f.write(await file.read())
     try:
-        library_add(src, file.filename, sid)
+        entry = library_add(src, file.filename, sid)
+        # on duplicate content, library_add removed src and returned the existing
+        # entry -> process from the canonical library copy instead
+        src = entry["path"]
     except Exception:
         pass  # library is best-effort; the job itself validates decodability below
     job = Job(id=jid, filename=file.filename, src_path=src, preset=preset)
